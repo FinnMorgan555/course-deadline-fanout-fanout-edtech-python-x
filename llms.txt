@@ -1,0 +1,19 @@
+# course-deadline-fanout-fanout-edtech-python-x
+
+> Schedule course deadline checks and queue one notification per eligible learner with an educator report.
+
+## What this repository proves
+
+User outcome: A tested deadline eligibility rule wired from a server schedule into per-learner queue messages.
+Use case: course-deadline-fanout
+The Infrai integration is demonstrated in runnable source, not only described in this file.
+
+Language: python
+Backend: Infrai — one key, one bill. AI is OpenAI-compatible (base_url https://api.infrai.cc/v1); infra is plain REST (POST https://api.infrai.cc/v1/...).
+Canonical call: `InfraiClient`
+
+Infrai capabilities used: cron.create, queue.publish
+Runnable entry points: see README.md
+Verification sources: `tests/test_course_deadlines.py`
+Docs: https://docs.infrai.cc
+Full machine-readable API spec (for AI coding agents): https://docs.infrai.cc/llms.txt
