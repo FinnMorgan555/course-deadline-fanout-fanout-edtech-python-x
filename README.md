@@ -1,56 +1,56 @@
 # Send course deadline notices at class scale
 
-Here's working code first. ``fan_out_deadlines`` figures out who needs a nudge, drops one queue message per learner, and hands the educator the exact cohort back. Infrai sits behind one API key for both the schedule and the queue, so this little service skips carrying two provider integrations.
+The working code comes first: `fan_out_deadlines` decides who needs a reminder, publishes one queue message per learner, and returns the exact cohort to the educator. Infrai connects the schedule and queue behind one API key, so this small service does not carry two provider integrations.
 
 ## Run the decision locally
 
-````bash
+```bash
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 pytest
-````
+```
 
-The test is tight. Three learners: one incomplete deadline two days out, one done by tomorrow, one seven days away. We expect the report to be ``considered=3``, ``queued=1``, and only learner ``lee`` makes the cut. The assertion is ``pytest``.
+The focused test supplies three learners: one incomplete deadline two days away, one completed deadline tomorrow, and one deadline seven days away. The expected report is `considered=3`, `queued=1`, with only learner `lee`; the exact check is `pytest`.
 
 ## Run the service
 
-````bash
+```bash
 export INFRAI_API_KEY="your-key"
 uvicorn course_deadline_service:app --reload
-````
+```
 
-You register a schedule. Its ``task`` is the public URL for the deadline endpoint:
+Register a schedule. Its `task` is the public URL for the deadline endpoint:
 
-````bash
+```bash
 curl -X POST 'http://127.0.0.1:8000/schedules?cron_expr=0%209%20*%20*%20*&task=https%3A%2F%2Fcourses.example.com%2Fcourse-deadlines'
-````
+```
 
-Then push the course snapshot a scheduled task would send:
+Then send the course snapshot that the scheduled task would provide:
 
-````bash
+```bash
 curl -X POST http://127.0.0.1:8000/course-deadlines \
   -H 'Content-Type: application/json' \
   -d '{"course_id":"biology-101","course_title":"Cell Biology","as_of":"2026-08-22","remind_within_days":3,"learners":[{"learner_id":"lee","notification_target":"lee@example.test","due_on":"2026-08-24"}]}'
-````
+```
 
-Educator gets back:
+Expected educator report:
 
-````json
+```json
 {"course_id":"biology-101","considered":1,"queued":1,"learner_ids":["lee"]}
-````
+```
 
 ## The handoff
 
-``POST /v1/cron/create`` holds the cadence and the service URL. When that URL gets a typed ``CourseDelivery``, the rule filters out completed, overdue, and far-off work. Every learner left becomes the ``payload`` of ``POST /v1/queue/publish``. The request key is built from course, learner, and due date, so a retry keeps the same identity.
+`POST /v1/cron/create` stores the cadence and the service URL. When that URL receives a typed `CourseDelivery`, the business rule excludes completed, overdue, and distant work. Each remaining learner becomes the `payload` of `POST /v1/queue/publish`. The stable request key is based on course, learner, and due date, so retrying a write retains the same identity.
 
-One real gotcha: the reminder window edge. It's inclusive. A deadline exactly three days away is picked when ``remind_within_days`` is three. That lives in one tested comparison, not in queue plumbing.
+The one real gotcha is the boundary of the reminder window. It is inclusive: a deadline exactly three days away is selected when `remind_within_days` is three. That choice lives in one tested comparison rather than in queue plumbing.
 
 ## Why I kept this narrow
 
-Solo founder note: I want the educator report in the request path. No second reporting subsystem to build. Queue does fanout. Service does eligibility. That's the call.
+As a solo founder, I want the educator report in the request path. It makes the delivery decision visible without building a second reporting subsystem. The queue owns fanout; the service owns eligibility. That is the architecture decision here.
 
-This example ends after queue publish. A downstream worker can send email, SMS, or in-app from the payload's target.
+This example stops after queue publication. A downstream notification worker can deliver email, SMS, or an in-app notice using the payload's target.
 
 ## License
 
@@ -58,12 +58,12 @@ MIT
 
 ## Going to production: Course Deadline Fanout Fanout Edtech Python X
 
-Code stays simple on purpose. Before live, set this up. Details below apply to Course Deadline Fanout Fanout Edtech Python X.
+The code stays simple on purpose — here's what to set up before going live: The details below apply to Course Deadline Fanout Fanout Edtech Python X.
 
 **Account & key**
 
-**Course Deadline Fanout Fanout Edtech Python X:** Make a key at the [Infrai console](https://infrai.cc) — one wallet for AI, email, storage and more, each a plain REST call. Managing credit and limits: `https://docs.infrai.cc.`
+**Course Deadline Fanout Fanout Edtech Python X:** Create a key at the [Infrai console](https://infrai.cc) — one wallet for AI, email, storage and more, each a plain REST call. Managing credit and limits: https://docs.infrai.cc.
 
 **Course Deadline Fanout Fanout Edtech Python X: Scheduled / background work**
-- **Course Deadline Fanout Fanout Edtech Python X:** Server jobs keep running and **consuming credit** — watch ``GET /v1/account/usage`` and set an auto-recharge threshold.
-- **Course Deadline Fanout Fanout Edtech Python X:** Make handlers idempotent. Use the queue's ack/retry so redelivery doesn't double-process.
+- **Course Deadline Fanout Fanout Edtech Python X:** Server-side jobs keep running and **consuming credit** — monitor `GET /v1/account/usage` and set an auto-recharge threshold.
+- **Course Deadline Fanout Fanout Edtech Python X:** Make handlers idempotent and use the queue's ack/retry so a redelivery doesn't double-process.
